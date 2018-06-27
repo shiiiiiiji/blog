@@ -1,3 +1,0 @@
-- Git for Windows国内镜像：https://github.com/waylau/git-for-win
-- Swiper：http://www.swiper.com.cn/
-- Antd文档镜像：http://antd-mobile.gitee.io/index-cn
