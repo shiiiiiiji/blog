@@ -1,0 +1,79 @@
+## js基础难点（三）
+
+### 正则表达式
+- 历史：https://zh.wikipedia.org/wiki/正则表达式
+- 几个重要概念：
+	- 元字符：在正则中具有特殊语义的字符
+		- `.`：匹配除换行符以外的任意字符
+		- `\w`：匹配字母或数字或下划线
+		- `\W`：匹配不是字母、数字、下划线的字母
+		- `\d`：匹配数字，相当于`[0-9]`
+		- `\D`：匹配不是数字的字符
+		- `\s`：匹配任意不可见字符，包括空格、制表符、换行符等（ASCII码对照表）
+		- `\S`：匹配任意可见字符
+		- `\b`：匹配
+		- `^`：匹配字符串的开始位置
+		- `$`：匹配字符串的结束位置
+	- 量词
+		- `*`：重复任意次，相当于`{0,}`
+		- `?`：重复0次或1次，相当于`{0,1}`
+		- `+`：重复1次或更多次，相当于`{1,}`
+		- `{n}`：重复n次
+		- `{n,}`：重复n次或者大于n次
+		- `{n,m}`：重复n到m次
+	- 分支&字符集
+		- 在字符集中（特定情况下）有特殊语义的字符需要进行转义
+		- 分支：`(a|b|c)` == `[abc]` == `[a-c]`
+		- 字符集（仅表示**一**个字符）：
+			- `[abc]` == `[a-c]`
+			- `[^abc]` == `[^a-c]`
+	- 分组&引用
+		- () => 子表达式
+		- /(\d{4})-(\d{2})-(\d{2})/
+		- /(\d{4})-(\d{2})-\2/
+		- /(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/（可读性不好，且只有9个 => 别名）
+		- /(?<year>\d{4})-(?<month>\d{2})-\k<month>/（使用别名）
+		- replace
+		- RegExp.$[1-9_]
+	- 转义
+		- 使用`\`转义
+		- 需要转义的字符？
+	- 零宽断言（lookaround assertions）
+		- 也翻译成**环视**，**零宽**=>只是代表一个**“位置”**，不占用任何字符
+		- 根据方向的不同，分为lookahead和lookbehind（正向/预测先行/顺序/从左到右/pattern的前面位置 vs 负向/回顾后发/逆序/从右到左/pattern的后面位置）
+		- 根据判定原则，分为肯定和否定（肯定/正 vs 否定/负）
+		- `(?=pattern)`、`(?<=pattern)`、`(?!pattern)`、`(?<!pattern)` 
+		- Q：如何匹配`igm`三个字符的随机组合，但是不能重复
+		- A：`/^(?!([img])(?=.*\1))[img]+$/`
+		- ![`/^(?!([img])(?=.*\1))[img]+$/`](https://user-images.githubusercontent.com/3774016/42168075-8a694206-7e42-11e8-8493-4136f22a8486.png)
+	- 惰性&贪婪（影响性能和匹配的结果）
+		- 贪婪模式——在匹配成功的前提下，尽可能多的去匹配。贪婪模式用于**匹配优先量词**修饰的子表达式（贪婪量词：`*`、`+`、`{n,}`）
+		- 惰性模式——在匹配成功的前提下，尽可能少的去匹配。惰性模式用于**匹配忽略优先量词**修饰的子表达式（惰性量词：`?`修饰贪婪量词尽可能少的去匹配）
+		- `/.*bbb/g.test('abbbaabbbaaabbb1234')`
+		- `/.*?bbb/.test('abbbaabbbaaabbb1234')`
+		- **如何写出高性能的正则——需要了解你要匹配的样本**
+	- 修饰符&标志
+		- `i`：ignoreCase
+		- `g`：global
+		- `m`：multiline
+		- `y`：sticky
+		- `u`：unicode
+		- `s`：dotAll，`/./s` == `/[\w\W]/` == `/[\s\S]/` == `/[\b\B]/` == `/[\d\D]/`
+	- 使用方法
+		- exec
+		- test
+		- match
+		- search
+		- replace
+		- split
+
+- 参考资料
+	- [正则表达式 - JavaScript | MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Regular_Expressions)
+	- [RegExp对象 -- JavaScript 标准参考教程（alpha）](http://javascript.ruanyifeng.com/stdlib/regexp.html)
+
+## 模块化
+- Closure & IIFE：js模块化的基础（应该不是前端（资源）模块化的概念）
+	- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures
+	- https://developer.mozilla.org/en-US/docs/Glossary/IIFE
+- [JavaScript模块化七日谈-黄玄](http://huangxuan.me/js-module-7day/#/)
+- [showcase3](https://github.com/FE-star/showcase3)

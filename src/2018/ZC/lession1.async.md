@@ -1,4 +1,4 @@
-## js基础知识
+## js基础难点（一）
 
 ### 从设计模式说起
 - https://coolshell.cn/articles/4535.html
