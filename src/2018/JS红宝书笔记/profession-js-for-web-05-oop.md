@@ -145,6 +145,8 @@ var p = new Person();
 console.log(p.constructor === Person); /* false */
 console.log(p.constructor === Object); /* true */
 console.log(p.constructor === Person.prototype.constructor); /* true */
+console.log(p.hasOwnProperty('constructor')); // false
+console.log(Person.prototype.hasOwnProperty('constructor')); // true
 ```
 
 这就是`constructor`标识对象类型不靠谱的原因，因为原型对象很容易被重写，因此其constructor属性会被修改。但是有一点不会变的是“即使原型对象重写了，但是依然还是构造函数的原型（否则就不可能叫做原型对象了）”，所以`instanceof`判断的是**原型链上的原型是含有某构造函数的原型对象**来“标识对象类型”。
@@ -429,3 +431,243 @@ person1.sayName();
     - https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/create
 
 ### 继承（类之间，表现在子类的实例上）
+OO三大特性：封装、继承、多态。传统OO的继承分为：
+- 接口继承：只继承方法签名。因为ECMAScript函数没有签名，所以无法实现接口继承。
+- 实现继承：继承实际的方法。ECMAScript只支持实现继承，而且其实现继承主要是依靠**原型链**来实现的（基本思想：利用原型让一个引用类型继承另一个引用类型的属性和方法）。
+
+构造函数、原型和实例的关系：**每个构造函数都有一个原型对象,原型对象都包含一个指向构造函数的指针,实例都包含一个指向原型对象的内部指针**
+- 每个构造函数（其实是每个函数都有这个属性）都有一个`prototype属性`，这个属性默认指向的是一个对象（即`原型对象`）。构造函数本质也是函数，会包含一个指向`Function.prototype`的内部属性`[[Prototype]]`
+- `默认指向的原型对象`会默认包含一个`constructor属性`，并指向构造函数。原型对象会包含一个指向`Object.prototype`的内部属性`[[Prototype]]`
+- 通过new调用构造函数创建的实例对象会包含一个指向原型对象的内部属性`[[Prototype]]`
+- 这里需要说明的是：
+    - 所有对象都会默认包含一个指向其原型对象的内部属性`[[Prototype]]`
+    - 只有函数对象才会默认包含`prototype属性`
+    - 只有**默认**的原型对象才会默认包含`constructor属性`
+- 关系如下图所示：
+![](https://user-images.githubusercontent.com/3774016/39959479-d324c69e-5644-11e8-83a1-8f774d936bf9.jpg)
+
+图示如下：
+![](http://pazgkbbu5.bkt.clouddn.com/constructor.png)
+
+#### 原型链实现继承
+
+假定原型对象等于另一个类型的实例。如下图：
+![](http://pazgkbbu5.bkt.clouddn.com/prototype-chain.png)
+
+此时，原型对象将包含一个指向另一个原型的指针，相应的，另一个原型也包含着一个指向另一个构造函数的指针。如此层层递进，就构成了实例与原型的链条 => 原型链。
+
+- 实例与原型对象的关系 => new
+- 原型对象间的关系 => 重写原型对象
+
+代码大致如下：
+```javascript
+function SuperType(){
+    this.property = true;
+}
+SuperType.prototype.getSuperValue = function(){
+    return this.property;
+}
+
+function SubType(){
+    this.property = false;
+}
+
+// 继承了 SuperType
+SubType.prototype = new SuperType();
+
+SubType.prototype.getSubValue = function(){
+    return this.subproperty;
+}
+
+var instance = new SubType();
+console.log(instance.getSuperValue());
+```
+
+实例、构造函数、原型关系图示：
+![](https://user-images.githubusercontent.com/3774016/39959492-0deef4c0-5645-11e8-804e-690ec5f15619.jpg)
+
+=> 继承是通过创建SuperType而定实例，并将其赋给SubType.prototype实现的。本质是**重写原型对象**，代之以一个新类型的实例，因此新的原型对象就拥有了新类型实例的所有属性和方法了。
+
+=> 本质上，构造函数默认的原型对象其实本质上也是Object的一个实例。
+
+另外：
+- 一开始会觉得这样做很奇怪，实例当原型，但是想想构造函数默认的原型对象，不也是Object的一个实例嘛，只不过默认多了一个constructor属性。那我们只需要在重写原型对象之后，再对他添加指向构造函数的contructor属性即可。
+- 所谓类型，在js中是通过函数来定义的，从理论上讲，所有函数应当都是一个自定义类型。而充当了自定义类型的函数，我们称之为构造函数。只有当函数是以new操作符调用时，才体现出构造函数的一面的作用。一般构造函数以大写字母开头命名。
+
+上面这种继承方式：
+- 没有使用SubType默认提供的原型对象，而是重写了SubType的prototype属性
+- 实例内部的\_\_proto\_\_指针指向其创建时构造函数的原型对象
+- instance.constructor === SuperType，而不是SubType，这也能说明`constructor`属性不可靠
+- 给原型添加/重写方法一定要在**重写原型对象之后**，否则会丢失
+- 通过原型链实现继承时，不要直接用**对象字面量**赋给原型对象3，这样也是相当于重写了原型对象。
+
+通过实现原型链，本质上扩展了`原型搜索机制`。当以读取模式访问一个实例属性时，首先会在实例中搜索该属性；如果没有找到该属性，则会继续搜索实例的原型。**在通过原型链实现继承的情况下，搜索过程就得以沿着原型链继续向上**。在找不到属性或方法的情况下，搜索过程一直要前行到原型链末端才会停下来。
+
+如何确认实例和原型的关系：
+- instanceof操作符：测试实例与原型链中出现过的构造函数
+在上面的例子中，SubType.prototype的确存在于原型链中，故会返回true，虽然SubType.prototype.constructor !== SubType。
+
+从继承的概念上来看，SubType的确继承了SuperType，且instance是SubType的实例。因此，instance即是SubType类型的实例，也是SuperType类型的实例。但是这层关系却无法通过instance.constructor判断出来。（还是说constructor不靠谱的原因）
+
+但是，个人感觉目前这种继承方式是有问题的，因为父类本身的属性也是通过原型对象的方式继承，而不是子类本身。
+
+- isPrototypeOf()：只要是原型链中出现过的原型，都可以说是该原型链所派生的实例的原型。
+```javascript
+Object.prototype.isPrototypeOf(instance); // true
+SuperType.prototype.isPrototypeOf(instance); // true
+SubType.prototype.isPrototypeOf(instance); // true
+Object.prototype.isPrototypeOf(SuperType.prototype); // true
+SubType.prototype.isPrototypeOf(Object.prototype); // false
+```
+
+原型链实现继承的问题：
+- 超类型的构造函数的属性会成为子类型的原型属性，而原型对象的属性会被所有实例所共享
+    - 这也是一般在构建函数中定义属性，而不是在原型对象中定义属性的原因
+    - 一般来说，通过实例我们只能访问到原型对象的属性，但是却不能通过对象实例**重写**原型中的值。这里的重写分为两种情况：
+        - 如果保存的属性值是基本类型值，那么“重写”就是“修改”或者“重新赋值”
+        - 如果保存的属性值是引用类型值，那么“重写”就只是“重新赋值”的意思
+    - 但是，我们却可以对原型对象中引用类型的属性值进行“修改”，而因为原型属性是为所有实例共享的，因此“修改”也会同步到所有的实例对象。这一般是不能接受的。
+- 没有办法在不影响所有对象实例的情况下，给超类型的构造函数传递参数。
+
+#### “借用构造函数”实现继承（伪造对象或经典继承）
+为了解决包含引用类型值的原型对象带来的问题，可以借用构造函数，核心做法是**在子类型构造函数的内部**调用**超类型构造函数**，此时可以向超类型构造函数传递参数。
+
+> 函数只不过是在特定环境中执行代码的对象，因此通过使用apply和call方法也可以在（将来）新创建的对象上执行构造函数。
+
+```javascript
+function SuperType(name){
+    this.name = name;
+}
+function SubType(name){
+    SuperType.call(this, name); // 继承了 SuperType，同时还传递参数。同时，为了避免超类型构造函数不会重写子类型的属性，可以在调用超类型构造函数后，再添加应该在子类型中定义的属性
+    this.age = 29;
+}
+var instance = new SubType();
+```
+
+但是，很明显，这样的方式也还是有问题的：
+- 方法都在构造函数中定义，无法实现函数复用
+- 在超类型的原型中定义的方法，对子类型而言也是不可见的
+- instanceof和isPrototypeOf无法识别超类型和超类型的原型
+
+#### 组合继承（伪经典继承）
+组合使用原型链和借用构造函数来实现继承。
+- 使用原型链实现对原型属性和方法的继承，实现函数复用 --- 继承方法
+- 通过借用构造函数来实现对实例属性的继承，保证每个实例都有自己的属性 --- 继承属性
+
+```javascript
+function SuperType(name){
+    this.name = name;
+    this.colors = ['red', 'blue', 'green'];
+}
+SuperType.prototype.sayName = function(){
+    console.log(this.name);
+}
+function SubType(name, age){
+    // 继承属性
+    SuperType.call(this, name);
+    this.age = age;
+}
+// 继承方法
+SubType.prototype = new SuperType();
+SubType.prototype.constructor = SubType;
+SubType.protptype.sayAge = function(){
+    console.log(this.age);
+}
+```
+
+这种组合继承的方式：
+- instanceof和isPrototypeOf能够识别超类型和超类型原型对象
+- 通过new一个超类型实例的方法，来建立起原型对象间的连接（或者Object.create()可以创建一个新对象，并且以参数为其原型对象。）
+    - 但是其实这种情况下一方面会调用一次超类型构造函数，
+    - 而且原型对象（也就是实例对象）通过new得到超类型构造函数内的属性和方法是冗余的（因为在子类型构造函数内调用超类型构造函数已经继承了，所以new子类型后的实例对象本身就已经有了这些属性和方法）。
+- 我们如何在不借用超类型实例对象的前提下，直接将子类型构造函数的原型对象的原型（__proto__属性，默认是Object.prototype）设置为超类型构造函数的原型对象
+
+#### 原型式继承
+> 借助原型可以基于已有的对象创建新对象，同时还不必因此创建自定义类型。 ——《JavaScript中的原型式继承》（Prototypal Inheritance in JavaScript） 道格拉斯·克罗克福德，2006
+
+```javascript
+function object(o){
+    function F(){}  // 先创建了一个临时性的构造函数
+    F.prototype = o;    // 将传入的对象作为这个构造函数的原型
+    return new F(); // 返回这个临时类型的一个新实例
+}
+```
+
+从本质上讲，**object()对传入其中的对象执行了一次浅复制**
+
+这种原型式继承，要求必须有一个对象（`o`）可以作为另一个对象（新实例：new F()）的基础，然后根据具体需求对得到的对象加以修改。（会将基础对象作为其原型对象）
+
+=> ECMAScript5用过新增Object.create()方法规范化了原型式继承。这个方法接收两个参数：
+- 一个用作新对象原型的对象
+- 一个为新对象定义额外属性的对象（可选），与Object.defineProperties()方法的第二个参数格式相同，每个属性都是通过自己的描述符定义的。这种方式指定的任何属性都会覆盖原型对象上的同名属性
+
+> 为什么不可以直接设置`__proto__`属性来设置原型链：
+> - https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/proto
+> - https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf
+> - 另外，`__proto__`属性是一个访问器属性，[[Prototype]]是一个内部属性，可以通过`__proto__`属性的getter和setter方法读取和设置[[Prototype]]属性
+
+**在没有必要兴师动众地创建构造函数，而指向让一个对象与另一个对象保持类似的情况下，原型式继承是完全可以胜任的**。但是仍然会存在包含引用类型值的属性的原型对象的修改会被所有实例所同步的问题。
+
+#### 寄生式继承
+与寄生构造函数和工厂模式类似，即创建一个仅用于封装继承过程的函数，该函数在内部以某种方式来增强对象，最后再像真的是它做了所有工作一样返回对象。
+
+```javascript
+function createAnother(o){
+    var clone = object(o);
+    clone.sayHi = function(){
+        console.log('hi');
+    }
+    return clone;
+}
+```
+
+主要考虑对象而不是自定义类型和构造函数的情况下，寄生式继承也是一种有用的模式。任何能够返回新对象的函数都适用于此模式。
+
+> 使用寄生式继承来为对象添加函数，会由于不能做到函数复用而降低效率；与构造函数模式类似。
+
+#### 寄生组合式继承
+组合继承的问题：无论什么情况下，都会调用两次超类型构造函数。
+- 一次构造函数调用，是在创建子类型原型的时候
+- 一次普通调用，是在子类型构造函数内部
+
+寄生组合式继承：**通过借用构造函数来继承属性，通过原型链的混成形式来继承方法**，不必为了指定子类型的原型而调用超类型的构造函数，我们所需要的无非就是超类型原型的一个副本而已。本质上，就是使用寄生式继承来继承超类型的原型，然后再把结果指定给子类型的原型。
+
+```javascript
+// 继承原型
+function inheritPrototype(subType, superType){
+    var prototype = object(superType.prototype);    // 创建对象。超类型原型的一个副本
+    prototype.constructor = subType;                // 增强对象。为创建的副本添加constructor属性，从而弥补因重写原型而失去的默认的constructor属性
+    subType.prototype = prototype;                  // 指定对象。将新创建的对象（即副本）复制给子类型的原型
+}
+```
+
+完整继承示例代码：
+```javascript
+function SuperType(name){
+    this.name = name;
+    this.colors = ['red', 'blue'];
+}
+SuperType.prototype.sayName = function(){
+    console.log(this.name);
+}
+
+function SubType(name, age){
+    SuperType.call(this, name);
+    this.age = age;
+}
+
+inheritPrototype(SubType, SuperType);
+
+SubType.prototype.sayAge = function(){
+    console.log(this.age);
+}
+```
+
+寄生组合式继承的高效率体现在它**只调用了一次SuperType构造函数，并且因此避免了在SubType.prototype上面创建不必要的、多余的属性**。同时，原型链还能保持不变=>还能正常使用instanceof和isPrototypeOf()。
+
+> YUI的YAHOO.lang.extend()即采用了寄生组合式继承
+> http://developer.yahoo.com/yui/
+
+### 小结
+ECMAScript支持面向对象编程（OO），但不适用类或者接口。对象可以在代码执行过程中创建和增强（传统），因此具有动态性而非严格定义的实体（但在Java中不可以，会报错）
