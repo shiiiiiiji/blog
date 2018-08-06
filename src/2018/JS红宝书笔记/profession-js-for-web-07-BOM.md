@@ -85,10 +85,38 @@ window.setTimeout()，接受两个参数：
 间歇调用与超时调用类似，按照指定的时间间隔重复执行代码，直至间歇调用被取消或者页面被卸载。
 
 window.setInterval()，接受参数与 setTimeout() 相同。同样，调用 setInterval() 方法会返回一个间歇调用 ID ，可用于在将来某个时刻取消间歇调用，可以调用`clearInterval()`方法并将相应的间歇调用 ID 作为参数传递给它。
+```javascript
+var num = 0;
+var max = 10;
+var intervalId = null;
+function incrementNumber() {
+    num++;
+    // 如果执行次数达到了 max 设定的值，则取消后续尚未执行的调用
+    if (num == max) {
+        clearInterval(intervalId);
+        alert("Done");
+    }
+}
+intervalId = setInterval(incrementNumber, 500);
+```
 
 **取消间歇调用的重要性要>>>高于取消超时调用**，因为在不加干涉的情况下，间歇调用将会一直执行到页面卸载。
 
 **使用超时调用来模拟间歇调用是一种最佳模式**。（在开发环境下，很少使用真正的间歇调用，原因是后一个间歇调用可能会在前一个间歇调用结束之前启动）
+```javascript
+var num = 0;
+var max = 10;
+function incrementNumber() {
+    num++;
+    // 如果执行次数未达到 max 设定的值，则设置另一次超时调用
+    if (num < max) {
+        setTimeout(incrementNumber, 500);
+    } else {
+        alert("Done");
+    }
+}
+setTimeout(incrementNumber, 500);
+```
 
 #### 系统对话框
 - window.alert()

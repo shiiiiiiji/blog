@@ -37,6 +37,7 @@
         - toString() -> 数组的字符串表示（每个值的字符串表示拼接成了一个字符串，中间用逗号分隔）（此方法一般隐式调用居多）
         - toLocaleString() -> 一般同 toString()
         - join() -> 可以使用不同的分隔符来构建字符串（默认（=>不传或传入undefined）情况会用逗号分隔，传入空字符串才无分隔）
+        - **类型转换有一种情况是某些函数接受特定类型的参数，会将参数转换为对应类型**
     - 栈方法（LIFO）
         - push()：可以接收任意数量的参数，逐个添加到数组末尾，并返回修改后的长度
         - pop()：从数组末尾移除最后一项，同时减少数组的 length 值，并返回移除的项
@@ -69,6 +70,18 @@
             - 删除：可以删除从任意位置开始任意项，只传入前两个参数
             - 插入：可以在任意位置插入任意项，参数均传，其中第二个参数为0（删除项数为0）
             - 替换：可以从任意位置替换任意几项为任意项，参数均传，其中第二个参数不为0
+            ```javascript
+                var colors = [“red”, “green”, “blue”];
+                var removed = colors.splice(0,1); //remove the first item
+                alert(colors); //green,blue
+                alert(removed); //red - one item array
+                removed = colors.splice(1, 0, “yellow”, “orange”); //insert two items at position 1
+                alert(colors); //green,yellow,orange,blue
+                alert(removed); //empty array
+                removed = colors.splice(1, 1, “red”, “purple”); //insert two values, remove one
+                alert(colors); //green,red,purple,orange,blue
+                alert(removed); //yellow - one item array
+            ```
     - 位置方法
         - 两个位置方法，均接收两个参数：要查找的项、查找起始位置（可选，可为负数）
             - indexOf()：从前往后
@@ -82,11 +95,55 @@
             - forEach()：没有返回值
             - map()：返回每次函数调用的结果组成的数组
             - some()：如果该函数对任一项返回true，则返回true
+            ```javascript
+            var numbers = [1,2,3,4,5,4,3,2,1];
+            var everyResult = numbers.every(function(item, index, array){
+                return (item > 2);
+            });
+            alert(everyResult); //false
+
+            var someResult = numbers.some(function(item, index, array){
+                return (item > 2);
+            });
+            alert(someResult); //true
+
+            var numbers = [1,2,3,4,5,4,3,2,1];
+            var filterResult = numbers.filter(function(item, index, array){
+                return (item > 2);
+            });
+            alert(filterResult); //[3,4,5,4,3]
+
+            var numbers = [1,2,3,4,5,4,3,2,1];
+            var mapResult = numbers.map(function(item, index, array){
+                return item * 2;
+            });
+            alert(mapResult); //[2,4,6,8,10,8,6,4,2]
+
+            var numbers = [1,2,3,4,5,4,3,2,1];
+            numbers.forEach(function(item, index, array){
+                //do something here
+            });
+            ```
+            
     - 归并方法
         - 两个归并方法，都会迭代数组的所有项，然后构建一个最终返回的值。均接收两个参数：在每一项上调用的函数、作为归并基础的初始值（可选）
             - reduce()：从前往后
             - reduceRight()：从后往前
         - 第一个参数函数接收4个参数：前一个值、当前值、项的索引、数组对象。函数返回的任何值都会作为第一个参数自动传给下一项
+        ```javascript
+        var values = [1,2,3,4,5];
+        var sum = values.reduce(function(prev, cur, index, array){
+            return prev + cur;
+        });
+        alert(sum); //15
+
+        var values = [1,2,3,4,5];
+        var sum = values.reduceRight(function(prev, cur, index, array){
+            return prev + cur;
+        });
+        alert(sum); //15
+        ```
+
 - Date类型
     - 创建一个日期对象：使用Date构造函数
         - 不传入参数 => 自动获得当前日期和时间
