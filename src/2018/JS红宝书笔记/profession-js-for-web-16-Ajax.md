@@ -404,3 +404,72 @@ img.src = "http://www.example/com/test?name=Nicholas";
 - 无法访问服务器的响应文本
 
 因此，**图像 Ping 只能用户浏览器与服务器间的单向通信。**
+
+
+#### JSONP
+JSONP 是 JSON with padding（填充式 JSON 或参数式 JSON）的简写，是应用 JSON 的一种新方法。JSONP 看起来与 JSON 差不多，只不过 **是被包含在函数调用中的 JSON**：
+
+```javascript
+callback({"name": "Nicholas"});
+```
+
+JSONP 由两部分组成：
+- 回调函数：是当响应到来时应该在页面中调用的函数，回调函数的名字一般是在请求中指定的
+- 数据：是传入回调函数中的 JSON 数据
+
+```
+// 典型的 JSONP 请求
+http://freegeoip.net/json?callback=handleResponse // 请求一个 JSONP 地理定位服务
+```
+
+通过查询字符串来指定 JSONP 服务的回调函数是很常见的，这里指定的回调函数的名字叫 handleResponse()。
+
+JSONP 是通过动态`<script>`元素来使用的，使用时可以为 src 属性指定一个跨域 URL。（这里的 script 元素与 img 元素类似，都有能力不受限制地从其他域加载资源）
+
+因为 JSONP 是有效的 JavaScript 代码，所以在请求完成后，即在 JSONP 响应加载到页面以后，就会立即执行。
+
+```javascript
+function handleResponse(response){
+    alert("You are at IP address " + response.ip + ", which is in " + response.city + ", " + response.region_name);
+}
+var script = document.createElement("script");
+script.src = "http://freegeoip.net/json?callback=handleResponse";
+document.body.insertBefore(script, document.body.firstChild);
+```
+
+JSONP 与图像 Ping相比，优点在于能够直接访问响应文本，支持在浏览器与服务器之间双向通信。
+
+不足在于：
+- JSONP 是从其他域中加载代码执行，很可能在响应中夹带一些恶意代码，因此在使用不是自己运维的 Web 服务时，一定得保证安全可靠
+- 要确定 JSONP 请求是否失败并不容易
+
+#### Comet
+更高级的 Ajax 技术（或者称之为“服务器推送”），Ajax 是一种从页面像服务器请求数据的技术，而 Comet 则是一种服务器向页面推送数据的技术。
+
+实现方式：长轮询 和 流
+
+#### 服务器发送事件
+SSE，Service-Sent Events
+
+#### Web Sockets
+目标是在一个单独的持久连接上提供全双工、双向通信。
+
+纯文本 —— 复杂数据序列化
+
+
+### 安全
+
+对于未被授权系统有权访问某个资源的情况，称之为 CSRF（Cross-Site Request Forgery，跨站点请求伪造）。
+
+为确保 XHR 访问的 URL 安全，通行的做法就是：
+- 要求以 SSL 连接来访问可以通过 XHR 请求的资源
+- 要求每一次请求都要附带经过相应算法计算得到的验证码
+
+### 小结
+Ajax 是无需刷新页面就能够从服务器取得数据的一种方法，关于 Ajax：
+- 负责 Ajax 运行的核心对象是 XMLHttpRequest（XHR）对象
+- 虽然各浏览器实现 XHR 存在差异，但基本用法还相对规范
+
+同源策略是对 XHR 的一个主要约束，为通信设置了“相同的域，相同的端口，相同的协议”。
+
+试图访问上述限制之外的资源，都会引发安全错误，除非采用被认可的跨域解决方案——CORS（大部分浏览器通过 XHR 对象原生支持 CORS），图像 Ping 和 JSONP 是另外跨域通信的技术。
