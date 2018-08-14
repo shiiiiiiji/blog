@@ -347,13 +347,351 @@ function throttle(method, context){
 
 对于事件而言，有些连续触发的事件（如scroll、resize等），最好控制处理的频率，以确保浏览器不会在极短的时间内进行过多的计算（控制事件处理程序的执行 => 因此造成页面卡死或缓慢的原因在于事件处理程序的执行，而不是事件本身的触发）。
 
-**只要代码是周期执行的**，都应该使用节流，但是你不能控制请求执行的速率（拿事件来说，即事件触发的频率）。
+**只要代码是周期执行的**，都应该使用节，都应该使用节流，但是你不能控制请求执行的速率（拿事件来说，即事件触发的频率）。
 
 ### 自定义事件
+事件是一种叫做观察者的设计模式，这是一种创建松散耦合代码的技术。对象可以发布事件，用来表示在该对象生命周期中某个有趣的时刻到了，然后其他对象可以观察该对象，等待这些有趣的时刻到来并通过运行代码来响应。
 
+观察者模式由两类对象组成：主体和观察者。
+- 主体：负责发布事件
+- 观察者：同时通过订阅这些事件来观察该主体
+
+该模式的一个关键概念是主体并不知道观察者的任何事情，也就是说 **可以独立存在并正确运行（即使观察者不存在）**。从另一个方面来说，观察者知道主体并能注册事件的回调函数（事件处理程序）。
+
+事件是与 DOM 交互的最常见的方式，但也可以用于非 DOM 代码中——通过实现自定义事件。（在 DOM 中，如何通过代码触发一个事件？）
+
+自定义事件背后的概念是 **创建一个管理事件的对象，让其他对象监听那些事件**，实现此功能的基本模式如下：
+
+```javascript
+function EventTarget(){
+    this.handlers = {}; // 储存事件处理程序
+}
+
+EventTarget.prototype = {
+    constructor: EventTarget,
+    // 用于注册给定类型事件的事件处理程序
+    // 接收两个参数：
+    // - 事件类型
+    // - 用于处理该事件的函数
+    addHandler: function(type, handler){
+        if(typeof this.handlers[type] == 'undefined'){   // 是否存在一个针对该事件类型的数组，没有则创建一个新的
+            this.handlers[type] = [];
+        }
+        // 添加该处理程序到数组的末尾
+        this.handlers[type].push(handler);
+    },
+    // 用于触发一个事件
+    // 接收一个单独的参数
+    // - 至少包含 type 属性的对象
+    fire: function(event){
+        if(!event.target){  // 如果 event 对象尚未指定 target 属性，就先给 event 对象，设置一个 target 属性
+            event.target = this;
+        }
+        if(this.handlers[event.type] instanceof Array){
+            var handlers = this.handlers[event.type]; // 查找对应事件类型的一组处理程序
+            for(var i=0, len=handlers.length; i<  len; i++){
+                handlers[i](event); // 调用各个函数，并给出 event 对象。因为这些都是自定义事件，所以 event 对象上还需要额外信息可以自己决定
+            }
+        }
+    },
+    // 用于注销某个事件类型的事件处理程序
+    // 是 addHandler() 的辅助
+    // 接收参数一样：事件的类型和事件处理程序
+    
+    removeHandler: function(type, handler){
+        if(this.handlers[type] instanceof Array){
+            var handlers = this.handlers[type];
+            for(var i=0, len=handlers.length; i<  len; i++){
+                if(handlers[i] === handler){ // 搜索事件处理程序的数组，找到要删除的处理程序的位置
+                    break;  // 找到了则退出循环（终止搜索）
+                }
+            }
+
+            handlers.splice(i, 1);  // 删除指定事件处理程序
+        }
+    }
+}
+
+```
+
+使用：
+```javascript
+function handleMessage(event){
+    alert('Message received: ' + event.message);
+}
+
+// 创建一个新对象
+var target = new EventTarget()
+
+// 添加一个事件处理程序
+target.addHandler('message', handleMessage);
+
+// 触发事件
+target.fire({
+    type: 'message',
+    message: 'hello, world!'
+});
+
+// 删除事件处理程序
+target.removehandler('message', handleMessage);
+
+// 再次，应没有处理程序
+target.fire({
+    type: 'message',
+    message: 'hello, world!'
+});
+```
+
+因为这种功能是封装在一种自定义类型中的，其他对象类型可以继承 EventTarget 并获得这个行为：
+
+```javascript
+function Person(name, age){
+    EventTarget.call(this);
+    this.name = name;
+    this.age = age;
+}
+
+inheritPrototype(Person, EventTarget);
+
+Person.prototype.say = function(message){
+    this.fire({type: "message", message: message});
+}
+
+function handleMessage(event){
+    alert(event.target.name + ' says: ' + event.message);
+}
+
+// 创建新 person
+var person = new Person('Nicholas', 29);
+
+// 添加一个事件处理程序
+person.addHandler('message', handleMessage);
+
+// 在该对象上调用 1 个方法，它触发消息事件
+person.say('Hi there.');
+```
+
+**一旦调用了 say()，便触发了事件**，它包含了消息的细节。（Q：自定义事件触发事件的方式？）
+
+**在某种类型的另外的方法中调用 fire() 方法是很常见的，同时它通常不是公开调用的。**
+
+当代码中存在多个部分在特定时刻相互交互的情况下，自定义事件就非常有用了。这时，如果每个对象都有对其他所有对象的引用，那么整个代码就会紧密耦合，同时维护也变的很困难，因为对某个对象的修改也会影响到其他对象。使用自定义事件有助于解耦相关对象，保护功能的隔绝。在很多情况下，触发事件的代码和监听事件代码是完全分离的。
 
 ### 拖放
+最简单的拖放界面实现代码：
+```javascript
+var DragDrop = function () {
 
+    var dragging = null;    // 初始是 null，存放被拖动的元素。当其不为 null 时，就知道正在拖动某个东西
+
+    function handleEvent(event) {
+        // 处理拖放功能中的所有的三个鼠标事件
+
+        //get event and target
+        event = EventUtil.getEvent(event);  // 获取 event 对象的引用
+        var target = EventUtil.getTarget(event);    // 获取事件目标的引用
+
+        //determine the type of event
+        switch (event.type) {
+            case "mousedown":
+                // 当 mousedown 事件发生时，检查 target 的 class 是否包含“draggable”类，是就将其存放到 dragging 中 => 这个技巧可以很方便地通过标记语言而非 JavaScript 脚本来确定可拖动的元素 
+                if (target.className.indexOf("draggable") > -1) {
+                    dragging = target;
+                }
+                break;
+
+            case "mousemove":
+                if (dragging !== null) {    // 检查 draging 是否为 null，就知道 draging 就是要拖动的元素
+
+                    //assign location
+                    dragging.style.left = event.clientX + "px";
+                    dragging.style.top = event.clientY + "px";
+                }
+                break;
+
+            case "mouseup":
+                // 仅仅将 draging 重置为 null，让 mousemove 事件中的判断失效 
+                dragging = null;
+                break;
+        }
+    };
+
+    //public interface
+    // DragDrop 还有两个公共方法，只是相应添加和删除所有的事件处理程序。这两个函数提供了额外的对拖放功能的控制手段
+    return {
+        enable: function () {
+            EventUtil.addHandler(document, "mousedown", handleEvent);
+            EventUtil.addHandler(document, "mousemove", handleEvent);
+            EventUtil.addHandler(document, "mouseup", handleEvent);
+        },
+
+        disable: function () {
+            EventUtil.removeHandler(document, "mousedown", handleEvent);
+            EventUtil.removeHandler(document, "mousemove", handleEvent);
+            EventUtil.removeHandler(document, "mouseup", handleEvent);
+        }
+    }
+}();
+
+DragDrop.enable();
+```
+
+DragDrop 对象封装了拖放的所有基本功能，这是一个 **单例对象**，并使用 **模块模式** 来隐藏某些实现细节。
+
+要使用 DrapDrop 对象，只要在页面上包含这些代码并调用 enable()。拖放会自动针对所有包含“draggable”类的元素启用。
+
+```html
+ <!-- 为了元素能被拖放，他必须是绝对定位的 -->
+<div class="draggable" style="position:absolute; background:red"> </div>
+```
+
+修缮拖动功能：
+```javascript
+var DragDrop = function(){
+        
+    // ...
+
+    diffX = 0,
+    diffY = 0;
+
+function handleEvent(event){
+
+    // ...       
+
+    //determine the type of event
+    switch(event.type){
+        case "mousedown":
+            if (target.className.indexOf("draggable") > -1){
+                // ...
+
+                diffX = event.clientX - target.offsetLeft;
+                diffY = event.clientY - target.offsetTop;
+
+            }                     
+            break;
+            
+        case "mousemove":
+            if (dragging !== null){
+                
+                // 指定位置
+                dragging.style.left = (event.clientX - diffX) + "px";
+                dragging.style.top = (event.clientY - diffY) + "px";                    
+            }                    
+            break;
+            
+        case "mouseup":
+            // ...
+    }
+};
+
+//public interface
+return {            
+    enable: function(){
+        // ...
+    },
+    
+    disable: function(){
+        // ...
+    }
+}
+}();
+
+DragDrop.enable();
+```
+
+注意：diffX 和 diffY 变量是私有的，因为只有 handleEvent() 函数需要用到它们。当 mousedown 事件发生时，通过 clientX 减去目标的 offsetLeft，clientY 减去目标的 offsetTop，可以计算到这两个变量的值。
+
+**添加自定义事件：**拖放功能还不能真正应用起来，除非能知道什么时候拖动开始了（？？？）
+
+前面的代码没有提供任何方法表示拖动开始、正在拖动或者已经结束 => 这时，可以使用自定义事件来指示这几个事件的发生，让应用的其他部分与拖动功能进行交互。
+
+由于 DragDrop 对象是一个使用了模块模式的单例，所有需要进行一些更改来使用 EventTarget 类型。首先，创建一个新的 EventTarget 对象，然后添加 enable() 和 disable() 方法，最后返回这个对象。
+
+```javascript
+var DragDrop = function(){
+        
+    var dragdrop = new EventTarget(),
+        dragging = null,
+        diffX = 0,
+        diffY = 0;
+    
+    function handleEvent(event){
+    
+        //get event and target
+        event = EventUtil.getEvent(event);
+        var target = EventUtil.getTarget(event);            
+    
+        //determine the type of event
+        switch(event.type){
+            case "mousedown":
+                if (target.className.indexOf("draggable") > -1){
+                    dragging = target;
+                    diffX = event.clientX - target.offsetLeft;
+                    diffY = event.clientY - target.offsetTop;
+
+                    // 触发自定义事件
+                    dragdrop.fire({type:"dragstart", target: dragging, x: event.clientX, y: event.clientY});
+                }                     
+                break;
+                
+            case "mousemove":
+                if (dragging !== null){
+                    
+                    //assign location
+                    dragging.style.left = (event.clientX - diffX) + "px";
+                    dragging.style.top = (event.clientY - diffY) + "px";   
+
+                    //fire custom event
+                    // 触发自定义事件
+                    dragdrop.fire({type:"drag", target: dragging, x: event.clientX, y: event.clientY});
+                }                    
+                break;
+                
+            case "mouseup":
+                // 触发自定义事件
+                dragdrop.fire({type:"dragend", target: dragging, x: event.clientX, y: event.clientY});
+                dragging = null;
+                break;
+        }
+    };
+    
+    //public interface
+    dragdrop.enable = function(){
+            EventUtil.addHandler(document, "mousedown", handleEvent);
+            EventUtil.addHandler(document, "mousemove", handleEvent);
+            EventUtil.addHandler(document, "mouseup", handleEvent);
+    };
+        
+    dragdrop.disable = function(){
+            EventUtil.removeHandler(document, "mousedown", handleEvent);
+            EventUtil.removeHandler(document, "mousemove", handleEvent);
+            EventUtil.removeHandler(document, "mouseup", handleEvent);
+    };
+    
+    return dragdrop;
+}();
+
+DragDrop.enable();
+
+// 上述修改令 DragDrop 对象支持了事件。为 DraoDrop 对象的每个事件添加了事件处理程序。
+                
+DragDrop.addHandler("dragstart", function(event){
+    var status = document.getElementById("status");
+    status.innerHTML = "Started dragging " + event.target.id;
+});
+
+DragDrop.addHandler("drag", function(event){
+    var status = document.getElementById("status");
+    status.innerHTML += "<br>Dragged " + event.target.id + " to (" + event.x + "," + event.y + ")";
+});
+
+DragDrop.addHandler("dragend", function(event){
+    var status = document.getElementById("status");
+    status.innerHTML += "<br>Dropped " + event.target.id + " at (" + event.x + "," + event.y + ")";
+});
+```
+
+**为 DragDrop 添加自定义事件可以使这个对象更健壮，它将可以在网络应用中处理复杂的拖放功能。**
 
 ### 小结
 - 函数：JavaScript 中函数非常强大，是第一类对象：
@@ -374,3 +712,4 @@ function throttle(method, context){
 - JavaScript 中经常以事件的形式应用观察者模式。
     - 虽然事件常常和 DOM 一起使用，但是也可以自定义事件，有助于将不同部分的代码相互之间解耦。
 - 拖放
+    - 将拖放行为和自定义事件结合起来可以创建一个可重复使用的框架，它能应用于各种不同的情况下。
