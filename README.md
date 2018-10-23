@@ -1,4 +1,1 @@
-Welcome to visit my blog.
-
-- [labels](https://github.com/0b11111110/blog/labels) 
-- [archives](https://github.com/0b11111110/blog/issues)
+这里主要记录一些学习笔记（.md）以及一些日常思考（issue），更多技术文章可见我的知乎专栏：[乱码一通](https://zhuanlan.zhihu.com/ttys000)。
