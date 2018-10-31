@@ -1,6 +1,6 @@
 这里主要记录一些我的：
-- [学习笔记（/src）](https://github.com/uhr/blog/tree/master/src)
-- [日常思考（issue）](https://github.com/uhr/blog/issues)
+- 学习笔记（[./src➡️](https://github.com/uhr/blog/tree/master/src)）
+- 日常思考（[issues➡️](https://github.com/uhr/blog/issues)）️
 
 更多技术文章见我的：
 - 知乎专栏：[乱码一通](https://zhuanlan.zhihu.com/ttys000)
