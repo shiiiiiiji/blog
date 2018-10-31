@@ -1,8 +1,10 @@
-这里主要记录一些我的
+这里主要记录一些我的：
 - [学习笔记（/src）](https://github.com/uhr/blog/tree/master/src)
 - [日常思考（issue）](https://github.com/uhr/blog/issues)
 
-更多技术文章见我的知乎专栏：[乱码一通](https://zhuanlan.zhihu.com/ttys000)
+更多技术文章见我的：
+- 知乎专栏：[乱码一通](https://zhuanlan.zhihu.com/ttys000)
+- 掘金：[ttys000](https://juejin.im/user/5812d967bf22ec006880d091/posts)
 
 还有一些有意思的个人**小**项目（真的很小）：
 - [uhr/FeZaoDuKe-Collection](https://github.com/uhr/FeZaoDuKe-Collection)
